@@ -31,7 +31,7 @@
 
 
 ## Supported image formats for converting to PDF
-- JPEG
+- JPEG/JPG
 - PNG
 - WEBP
 - TIFF
