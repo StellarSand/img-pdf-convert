@@ -31,7 +31,7 @@
 
 
 ## Supported image formats for converting to PDF
-- JPEG/JPG
+- JPEG
 - PNG
 - WEBP
 - TIFF
@@ -65,15 +65,16 @@ chmod +x img-pdf-convert
 ## Available options:
 ```
 -h, --help              Show this help message and exit
+-lf, --list-formats     Show a list of supported image formats
 
 ---Image(s) to PDF---
--f, --formats           Show supported image formats for converting to PDF
 -i, --image-files       Path to the image files
 -o, --output-file       Output file
 
 ---PDF(s) to image(s)---
 -p, --pdf-files         Path to the PDF files
--d, --directory         Output directory for converted images from PDF (optional)
+-d, --directory         Output directory for extracted images (optional)
+-if, --image-format     Output format for extracted images (optional, default: jpeg)
 ```
 
 
@@ -101,7 +102,17 @@ python3 img-pdf-convert -p document.pdf
 ```
 
 ```
-python3 img-pdf-convert -p document1.pdf document2.pdf -d /home/user/Downloads
+python3 img-pdf-convert -p document1.pdf document2.pdf -d /home/user/Downloads -if png
+```
+
+**Convert all images with a specified format to PDF file:**
+```
+python3 img-pdf-convert -i *.png *.jpg -o icon.pdf
+```
+
+**Convert all PDF files to images:**
+```
+python3 img-pdf-convert -p *.pdf
 ```
 
 

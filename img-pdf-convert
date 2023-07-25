@@ -17,6 +17,7 @@
 
 
 import argparse
+import glob
 import os
 from sys import argv
 from PIL import Image, UnidentifiedImageError
@@ -34,23 +35,33 @@ Convert images to PDFs and vice versa.
 
 Options:
     -h, --help              Show this help message and exit
+    -lf, --list-formats     Show a list of supported image formats
 
     ---Image(s) to PDF---
-    -f, --formats           Show supported image formats for converting to PDF
     -i, --image-files       Path to the image files
     -o, --output-file       Output file
 
     ---PDF(s) to image(s)---
     -p, --pdf-files         Path to the PDF files
-    -d, --directory         Output directory for converted images from PDF (optional)
+    -d, --directory         Output directory for extracted images (optional)
+    -if, --image-format     Output format for extracted images (optional, default: jpeg)
 
 Examples:
 python3 img-pdf-convert -i icon.png -o icon.pdf
+python3 img-pdf-convert -i *.png *.jpg -o icon.pdf
 python3 img-pdf-convert -i icon1.png icon2.jpg -o /home/user/Downloads/new_icon.pdf
 python3 img-pdf-convert -p document.pdf
-python3 img-pdf-convert -p document1.pdf document2.pdf -d /home/user/Downloads
+python3 img-pdf-convert -p *.pdf
+python3 img-pdf-convert -p document1.pdf document2.pdf -d /home/user/Downloads -if png
     ''')
     exit()
+
+
+def get_matching_files(patterns):
+    matched_files = []
+    for pattern in patterns:
+        matched_files.extend(glob.glob(pattern))
+    return matched_files
 
 
 def is_valid_image_file(input_file):
@@ -84,40 +95,46 @@ def pdf_to_images(pdf_file, output_directory):
         images = pdf2image.convert_from_path(pdf_file)
         if not output_directory:
             output_directory = os.path.join(os.path.dirname(pdf_file), os.path.splitext(os.path.basename(pdf_file))[0])
+        
         try:
             os.makedirs(output_directory, exist_ok=True)
         except PermissionError:
             print(f"Permission denied while creating the output directory {args.output_directory}.")
             exit()
+
+        output_format = "jpeg" if not args.image_format else args.image_format.lower()
+
         for i, image in enumerate(images):
-            image.save(f"{output_directory}/Page_{i+1}.png", "png")
-        print(f"[+] Extracted images from {pdf_file} successfully.\n")
+            image.save(f"{output_directory}/Page_{i+1}.{output_format}", output_format)
+        print(f"Done.\n")
     except FileNotFoundError:
         print(f"{pdf_file} was not found.")
         exit()
     except PermissionError:
         print(f"Permission denied while accessing {pdf_file}.")
         exit()
-    except:
+    except e:
         print(f"{pdf_file} is not a valid PDF file.")
         exit()
 
 
 arg_parser = argparse.ArgumentParser(add_help=False, usage="python3 img-pdf-convert -i <input files> -o <output file>")
 arg_parser.add_argument("-h", "--help", action="store_true")
-arg_parser.add_argument("-f", "--formats", action="store_true")
+arg_parser.add_argument("-lf", "--list-formats", action="store_true")
 arg_parser.add_argument("-i", "--image-files", nargs="+", dest="image_files")
 arg_parser.add_argument("-o", "--output-file", dest="output_file")
 arg_parser.add_argument("-p", "--pdf-files", nargs="+", dest="pdf_files")
 arg_parser.add_argument("-d", "--directory", dest="output_directory")
+arg_parser.add_argument("-if", "--image-format", dest="image_format")
 
 args = arg_parser.parse_args()
-supported_img_formats = ["jpeg", "jpg", "png", "webp", "tiff", "bmp", "ico", "icns", "pbm", "pgm", "ppm"]
+Image.MAX_IMAGE_PIXELS = None  # Remove size limit while extracting PDF files
+supported_img_formats = ["jpeg", "png", "webp", "tiff", "bmp", "ico", "icns", "pbm", "pgm", "ppm"]
 
 if len(argv) == 1 or args.help:
     usage() # Print usage if no options provided or -h/--help provided
 
-if args.formats:
+if args.list_formats:
     print(f"\nSupported image formats for converting to pdf:")
     for supported_format in supported_img_formats:
         print(f"{supported_format}")
@@ -133,6 +150,10 @@ if args.image_files and not args.pdf_files:
         print(f"\nNo output file provided.\nTry 'python3 img-pdf-convert -h' for more info.\n")
         exit()
     print(f"\nValidating all image files ...")
+    args.image_files = get_matching_files(args.image_files)
+    if not args.image_files:
+        print(f"No image files found with the provided patterns.\n")
+        exit()
     for file in args.image_files:
         if file.split('.')[-1].lower() not in supported_img_formats:
             print(f"\nThe format of {file} is not supported.\nTry 'python3 img-pdf-convert -h' for more info.\n")
@@ -146,10 +167,18 @@ elif args.pdf_files and not args.image_files:
         except PermissionError:
             print(f"Permission denied while creating the output directory {args.output_directory}.")
             exit()
+    args.pdf_files = get_matching_files(args.pdf_files)
+    if not args.pdf_files:
+        print(f"No PDF files found with the provided patterns.\n")
+        exit()
+    if args.image_format and args.image_format.lower() not in supported_img_formats:
+        print(f"\n{args.image_format} is not supported.\nTry 'python3 img-pdf-convert -h' for more info.\n")
+        exit()
     for file in args.pdf_files:
         if file.split('.')[-1].lower() != "pdf":
             print(f"\n{file} is not a PDF file.\nTry 'python3 img-pdf-convert -h' for more info.\n")
             exit()
+        print(f"\n[+] Extracting images from {file} ...")
         pdf_to_images(file, args.output_directory)
 else:
     print(f"Invalid options. Try 'python3 img-pdf-convert -h' for more info.\n")
